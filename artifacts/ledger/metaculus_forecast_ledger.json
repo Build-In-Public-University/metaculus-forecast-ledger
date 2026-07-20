@@ -1,0 +1,144 @@
+{
+  "artifact": "metaculus_forecast_ledger",
+  "created_at_utc": "2026-07-20T10:41:07.160349+00:00",
+  "entries": [
+    {
+      "latest_sha256_at_receipt": "140e8124a7407dafcc1396f155f96b95b3f01c5ad53249637f0a0602e3258d09",
+      "live_fetch_attempted": true,
+      "live_my_forecast_has_latest": true,
+      "live_my_forecast_latest_sha256": "db17d62462587ac92f0de43410b63a445cfa8d52f3f64530e86885e66d6ab9fa",
+      "post_id": 43491,
+      "question_id": 43498,
+      "rationale_sha256": "f9348ee567711eebbd14f6e5e356259ddf623377468f04c248bbf77be98913a5",
+      "receipt_has_latest": true,
+      "resolution_state": {
+        "actual_resolve_time": null,
+        "cp_reveal_time": "2026-05-21T17:00:00Z",
+        "post_status": "open",
+        "question_status": "open",
+        "resolution": null,
+        "resolution_set_time": null,
+        "scheduled_resolve_time": "2026-09-02T11:00:00Z",
+        "status": "open"
+      },
+      "score": null,
+      "score_note": "not computed; resolution-specific scoring not implemented yet",
+      "source_post_receipt_sha256": "dbd56d9b1c4a517676b3f20517fe4d6241c431669fc5058fd14993db691e391a",
+      "source_pre_post_sha256": "d392e13f34787fab85f9b7ed4cc246384b36d58ae85c649268bcee762fb4892a",
+      "status": "open",
+      "submitted_forecast_summary": 0.67,
+      "target": "metaculus-cup-summer-2026",
+      "title": "Will a new High Representative for Bosnia and Herzegovina officially be in place before September 2, 2026?",
+      "type": "binary"
+    },
+    {
+      "latest_sha256_at_receipt": "88931c7924cef41b951d87d5b0eff184a501620902ad4aae18c001bfb0e941bb",
+      "live_fetch_attempted": true,
+      "live_my_forecast_has_latest": true,
+      "live_my_forecast_latest_sha256": "40afdb5fced789f3b88ade4511cbc8d29d5271195bef8e6936ec9698dfc3bb43",
+      "post_id": 44551,
+      "question_id": 44705,
+      "rationale_sha256": "0e8ea29d482f7ce5030ece768b5119a2f471e070b69ccac1a486da074594451a",
+      "receipt_has_latest": true,
+      "resolution_state": {
+        "actual_resolve_time": null,
+        "cp_reveal_time": "2026-07-13T17:00:00Z",
+        "post_status": "open",
+        "question_status": "open",
+        "resolution": null,
+        "resolution_set_time": null,
+        "scheduled_resolve_time": "2026-08-15T12:00:00Z",
+        "status": "open"
+      },
+      "score": null,
+      "score_note": "not computed; resolution-specific scoring not implemented yet",
+      "source_post_receipt_sha256": "dbd56d9b1c4a517676b3f20517fe4d6241c431669fc5058fd14993db691e391a",
+      "source_pre_post_sha256": "d392e13f34787fab85f9b7ed4cc246384b36d58ae85c649268bcee762fb4892a",
+      "status": "open",
+      "submitted_forecast_summary": {
+        "forecast_cdf_count": 201,
+        "forecast_cdf_head": [
+          0.001,
+          0.00106,
+          0.00112,
+          0.00118,
+          0.00124
+        ],
+        "forecast_cdf_sha256": "98401d21c44c0ed343d0ad93e4eb16af518019ab609685e14fdba9eefe973ba7",
+        "forecast_cdf_tail": [
+          0.985051,
+          0.986097,
+          0.987079,
+          0.988,
+          0.988865
+        ],
+        "forecast_summary": {
+          "cdf_head": [
+            0.001,
+            0.00106,
+            0.00112,
+            0.00118,
+            0.00124
+          ],
+          "cdf_tail": [
+            0.985051,
+            0.986097,
+            0.987079,
+            0.988,
+            0.988865
+          ],
+          "distribution": "normal_cdf_on_metaculus_grid_min_step_repaired",
+          "mean": 69.0,
+          "min_step": 6e-05,
+          "sd": 7.0
+        }
+      },
+      "target": "metaculus-cup-summer-2026",
+      "title": "What percentage of the vote will Nigel Farage receive in the Clacton parliamentary by-election in August 2026?",
+      "type": "numeric"
+    },
+    {
+      "latest_sha256_at_receipt": "36687c2ff1825ebcf5d567a6d43f94557da7aeb16c487d8563c6f325fa22b393",
+      "live_fetch_attempted": true,
+      "live_my_forecast_has_latest": true,
+      "live_my_forecast_latest_sha256": "6ba784ced84007b548739c5df6fb1c947e00125f8aa9a90d969a5b4220dc70cc",
+      "post_id": 44676,
+      "question_id": 44835,
+      "rationale_sha256": "d89d5640e6bf0005d8261265e73aaa3d1d5b1a8c1fe196ae583a8a1d4aef8e7d",
+      "receipt_has_latest": true,
+      "resolution_state": {
+        "actual_resolve_time": null,
+        "cp_reveal_time": "2026-07-18T17:00:00Z",
+        "post_status": "open",
+        "question_status": "open",
+        "resolution": null,
+        "resolution_set_time": null,
+        "scheduled_resolve_time": "2026-08-15T00:00:00Z",
+        "status": "open"
+      },
+      "score": null,
+      "score_note": "not computed; resolution-specific scoring not implemented yet",
+      "source_post_receipt_sha256": "dbd56d9b1c4a517676b3f20517fe4d6241c431669fc5058fd14993db691e391a",
+      "source_pre_post_sha256": "d392e13f34787fab85f9b7ed4cc246384b36d58ae85c649268bcee762fb4892a",
+      "status": "open",
+      "submitted_forecast_summary": {
+        "Darline Graham Nordone": 0.06,
+        "Henry McMaster": 0.08,
+        "Mark Lynch": 0.17,
+        "Other": 0.17,
+        "Pamela Evette": 0.1,
+        "Ralph Norman": 0.28,
+        "Russell Fry": 0.14
+      },
+      "target": "metaculus-cup-summer-2026",
+      "title": "Who will be the 2026 Republican nominee for U.S. Senator from South Carolina?",
+      "type": "multiple_choice"
+    }
+  ],
+  "entry_count": 3,
+  "ledger_sha256": "ec3d139038fe01cd21c0f6cf21faf2b2b740c244eafb49b186b4a3d41479d1df",
+  "network_policy": "GET-only; this project contains no Metaculus POST endpoint calls",
+  "scope": "read-only ledger for submitted Metaculus forecasts",
+  "source_pre_post_path": "fixtures/metaculus_cup_practice_pre_post_forecast_packet.json",
+  "source_receipt_path": "fixtures/metaculus_cup_practice_post_receipt.json"
+}
