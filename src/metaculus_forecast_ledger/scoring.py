@@ -174,3 +174,73 @@ def _continuous_resolution_bucket(cdf: list[float], resolution: Any) -> int | No
         if cdf[i] <= value < cdf[i + 1]:
             return i
     return None
+
+
+def extract_resolution(post: dict[str, Any]) -> dict[str, Any]:
+    """Normalize the live Metaculus post resolution fields into score_entry inputs.
+
+    Returns a dict with:
+      resolved (bool): whether the question has resolved
+      type (str|None): resolved forecast type if present
+      resolution (Any): the normalized resolution value
+                        binary -> bool (True=Yes)
+                        multiple_choice -> option label string
+                        numeric/date/discrete -> float value
+      note (str): why resolution could not be extracted, if applicable
+
+    This only reads fields; it never calls the network.
+    """
+    question = post.get('question') or {}
+    if question.get('status') != 'resolved':
+        return {'resolved': False, 'type': None, 'resolution': None, 'note': 'question not resolved'}
+
+    type_ = question.get('type')
+    raw = question.get('resolution')
+    if raw is None:
+        return {'resolved': True, 'type': type_, 'resolution': None, 'note': 'resolution field missing'}
+
+    if type_ == 'binary':
+        if isinstance(raw, bool):
+            outcome = raw
+        else:
+            outcome = str(raw).strip().lower() in ('yes', 'true', '1')
+        return {'resolved': True, 'type': type_, 'resolution': outcome, 'note': 'ok'}
+
+    if type_ == 'multiple_choice':
+        if not isinstance(raw, str):
+            return {'resolved': True, 'type': type_, 'resolution': None, 'note': 'mc resolution not a string'}
+        return {'resolved': True, 'type': type_, 'resolution': raw, 'note': 'ok'}
+
+    if type_ in ('numeric', 'date', 'discrete'):
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            return {'resolved': True, 'type': type_, 'resolution': None, 'note': 'continuous resolution not numeric'}
+        return {'resolved': True, 'type': type_, 'resolution': value, 'note': 'ok'}
+
+    return {'resolved': True, 'type': type_, 'resolution': None, 'note': f'unsupported resolved type {type_!r}'}
+
+
+def score_post(post: dict[str, Any], frozen: dict[str, Any], latest: dict[str, Any] | None = None) -> tuple[float | None, str]:
+    """One-call scoring for a live Metaculus post.
+
+    Combines extract_resolution with score_entry so a resolved live post flows
+    straight to a baseline score. Returns (score, note).
+    """
+    extracted = extract_resolution(post)
+    if not extracted['resolved']:
+        return None, 'unresolved'
+    if extracted['note'] != 'ok':
+        return None, extracted['note']
+    type_ = extracted['type'] or frozen.get('type')
+    if not isinstance(type_, str):
+        return None, 'resolved post missing type'
+    if latest is None:
+        question = post.get('question') or {}
+        latest = (question.get('my_forecasts') or {}).get('latest')
+    resolution_state = {
+        'question_status': 'resolved',
+        'resolution': extracted['resolution'],
+        'resolved': True,
+    }
+    return score_entry(type_=type_, frozen=frozen, resolution_state=resolution_state, latest=latest)

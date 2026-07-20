@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import os
@@ -8,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .scoring import score_entry
+from .scoring import score_entry, score_post
 
 API_BASE_URL = 'https://www.metaculus.com/api'
 USER_AGENT = 'metaculus-forecast-ledger/0.1 (+https://github.com/Build-In-Public-University/metaculus-forecast-ledger)'
@@ -101,6 +102,14 @@ def build_ledger(
         live_post = fetch_post(entry['post_id'], token=token) if fetch else None
         latest = extract_latest_forecast(live_post) if live_post else None
         resolution_state = extract_resolution_state(live_post) if live_post else {}
+        # If the live post is resolved, score directly from the post so the
+        # score fills automatically. Otherwise fall back to the frozen path
+        # (which yields score=None / 'unresolved' for open questions).
+        if live_post is not None:
+            score, note = score_post(live_post, frozen, latest=latest)
+            score_fields = {'score': score, 'score_note': note, 'scoring_source': 'Metaculus baseline score (scoring/score_math.py)'}
+        else:
+            score_fields = _score_fields(entry['type'], frozen, resolution_state, latest)
         row = {
             'post_id': entry['post_id'],
             'question_id': entry['question_id'],
@@ -118,7 +127,7 @@ def build_ledger(
             'live_my_forecast_has_latest': bool(latest),
             'resolution_state': resolution_state,
             'status': _ledger_status(resolution_state),
-            **_score_fields(entry['type'], frozen, resolution_state, latest),
+            **score_fields,
         }
         rows.append(row)
     ledger = {
@@ -169,6 +178,57 @@ def write_ledger(ledger: dict[str, Any], output_path: str | Path) -> Path:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(ledger, indent=2, sort_keys=True) + '\n')
+    return path
+
+
+def _summary_row(entry: dict[str, Any]) -> dict[str, Any]:
+    summary = entry.get('submitted_forecast_summary')
+    if isinstance(summary, dict):
+        forecast_excerpt = json.dumps(summary, sort_keys=True)
+    else:
+        forecast_excerpt = '' if summary is None else str(summary)
+    score = entry.get('score')
+    return {
+        'post_id': entry.get('post_id'),
+        'type': entry.get('type'),
+        'status': entry.get('status'),
+        'forecast_excerpt': forecast_excerpt[:120],
+        'score': '' if score is None else round(score, 4),
+        'score_note': entry.get('score_note'),
+    }
+
+
+def write_ledger_summary_csv(ledger: dict[str, Any], output_path: str | Path) -> Path:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    columns = ['post_id', 'type', 'status', 'forecast_excerpt', 'score', 'score_note']
+    with path.open('w', newline='') as fh:
+        writer = csv.DictWriter(fh, fieldnames=columns)
+        writer.writeheader()
+        for entry in ledger.get('entries', []):
+            writer.writerow(_summary_row(entry))
+    return path
+
+
+def write_ledger_summary_md(ledger: dict[str, Any], output_path: str | Path) -> Path:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = ['# Metaculus Forecast Ledger — Summary', '']
+    created = ledger.get('created_at_utc', 'unknown')
+    lines.append(f'Generated (UTC): {created}')
+    lines.append(f"Entries: {ledger.get('entry_count', 0)}")
+    lines.append('')
+    lines.append('| post_id | type | status | forecast | score | note |')
+    lines.append('| --- | --- | --- | --- | --- | --- |')
+    for entry in ledger.get('entries', []):
+        row = _summary_row(entry)
+        score = '' if row['score'] == '' else f"{row['score']}"
+        lines.append(
+            f"| {row['post_id']} | {row['type']} | {row['status']} | "
+            f"{row['forecast_excerpt']} | {score} | {row['score_note']} |"
+        )
+    lines.append('')
+    path.write_text('\n'.join(lines))
     return path
 
 

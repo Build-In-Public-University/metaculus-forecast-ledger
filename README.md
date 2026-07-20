@@ -86,6 +86,29 @@ Source: https://github.com/Metaculus/metaculus/blob/main/scoring/score_math.py
 
 Continuous scoring needs the full CDF. The pinned Cup fixture redacts the numeric CDF, so a fully-scored numeric entry requires the live forecast distribution (`my_forecasts.latest.continuous_cdf`) at resolution time.
 
+## Resolution scoring pipeline
+
+The ledger scores resolved questions automatically via `score_post(post, frozen)`:
+
+1. `extract_resolution(post)` normalizes the live post's `question.resolution` field into the shape `score_entry` consumes:
+   - binary → `bool` (True = Yes)
+   - multiple_choice → option label string
+   - numeric/date/discrete → float value
+2. `score_entry(...)` computes the Metaculus Baseline score (see above).
+
+When you run the updater against a resolved live post, the `score` column fills from the post itself — no manual step. Open questions stay `score = null` with `score_note = "unresolved"`.
+
+## Summary export
+
+The CLI also writes human-readable summaries next to the JSON ledger:
+
+```text
+artifacts/ledger/metaculus_forecast_ledger_summary.csv
+artifacts/ledger/metaculus_forecast_ledger_summary.md
+```
+
+Both are generated read-only from the ledger artifact. No network calls.
+
 ## Verification
 
 ```bash
@@ -95,5 +118,5 @@ python3 -m pytest tests -q
 Expected:
 
 ```text
-12 passed
+18 passed
 ```
