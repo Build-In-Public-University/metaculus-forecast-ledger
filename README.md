@@ -74,7 +74,17 @@ score
 score_note
 ```
 
-`score` is intentionally not implemented yet. Different Metaculus types require different scoring logic and resolution extraction. False precision is how dashboards become weather vanes.
+`score` is filled when a question is resolved, using Metaculus' published **Baseline score** from `scoring/score_math.py`:
+
+- binary: `100 * ln(p·2) / ln(2)`
+- multiple_choice: `100 * ln(p·N) / ln(N)` where N = available options
+- continuous: `100 * ln(pmf[bucket] / baseline) / 2`, baseline `0.05` in each open tail, `(1 − 0.05·open_bounds)/(len(pmf)−2)` over the closed middle
+
+Unresolved questions keep `score = null` with `score_note = "unresolved"`. The ledger does not invent scores for open questions. That would defeat the entire point.
+
+Source: https://github.com/Metaculus/metaculus/blob/main/scoring/score_math.py
+
+Continuous scoring needs the full CDF. The pinned Cup fixture redacts the numeric CDF, so a fully-scored numeric entry requires the live forecast distribution (`my_forecasts.latest.continuous_cdf`) at resolution time.
 
 ## Verification
 
@@ -82,8 +92,8 @@ score_note
 python3 -m pytest tests -q
 ```
 
-Expected at initial publication:
+Expected:
 
 ```text
-3 passed
+12 passed
 ```

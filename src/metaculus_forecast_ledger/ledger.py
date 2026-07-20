@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .scoring import score_entry
+
 API_BASE_URL = 'https://www.metaculus.com/api'
 USER_AGENT = 'metaculus-forecast-ledger/0.1 (+https://github.com/Build-In-Public-University/metaculus-forecast-ledger)'
 
@@ -116,8 +118,7 @@ def build_ledger(
             'live_my_forecast_has_latest': bool(latest),
             'resolution_state': resolution_state,
             'status': _ledger_status(resolution_state),
-            'score': None,
-            'score_note': 'not computed; resolution-specific scoring not implemented yet',
+            **_score_fields(entry['type'], frozen, resolution_state, latest),
         }
         rows.append(row)
     ledger = {
@@ -146,6 +147,11 @@ def _public_forecast_summary(forecast: dict[str, Any]) -> Any:
             'forecast_cdf_tail': forecast.get('forecast_cdf_tail'),
         }
     return forecast.get('forecast')
+
+
+def _score_fields(type_: str, frozen: dict[str, Any], resolution_state: dict[str, Any], latest: dict[str, Any] | None) -> dict[str, Any]:
+    score, note = score_entry(type_=type_, frozen=frozen, resolution_state=resolution_state, latest=latest)
+    return {'score': score, 'score_note': note, 'scoring_source': 'Metaculus baseline score (scoring/score_math.py)'}
 
 
 def _ledger_status(resolution_state: dict[str, Any]) -> str:

@@ -21,6 +21,9 @@ def test_build_ledger_from_receipts_without_network():
     assert all(row['receipt_has_latest'] is True for row in ledger['entries'])
     assert all(row['live_fetch_attempted'] is False for row in ledger['entries'])
     assert all(row['score'] is None for row in ledger['entries'])
+    # current Cup questions are still open -> unresolved, not faked
+    assert all(row['score_note'] == 'unresolved' for row in ledger['entries'])
+    assert all(row['scoring_source'].startswith('Metaculus baseline') for row in ledger['entries'])
     numeric = next(row for row in ledger['entries'] if row['type'] == 'numeric')
     assert numeric['submitted_forecast_summary']['forecast_cdf_count'] == 201
     assert numeric['submitted_forecast_summary']['forecast_cdf_sha256']
