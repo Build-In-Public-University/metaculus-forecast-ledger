@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .scoring import score_entry, score_post
+from .scoring import extract_resolution, is_resolved, score_entry, score_post
 
 API_BASE_URL = 'https://www.metaculus.com/api'
 USER_AGENT = 'metaculus-forecast-ledger/0.1 (+https://github.com/Build-In-Public-University/metaculus-forecast-ledger)'
@@ -87,6 +87,90 @@ def _receipt_entries(post_receipt: dict[str, Any]) -> list[dict[str, Any]]:
     return entries
 
 
+def _full_submitted_forecast(type_: str, frozen: dict[str, Any], latest: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Capture the complete submitted distribution for offline scoring.
+
+    Prefers the live ``my_forecasts.latest`` at build time (full CDF available),
+    falls back to the pre-post packet's ``forecast`` field. Numeric stores the
+    full ``continuous_cdf`` so resolution scoring never depends on re-fetching
+    Metaculus after the fact.
+    """
+    if type_ == 'binary':
+        if isinstance(latest, dict) and 'probability_yes' in latest:
+            return {'probability_yes': latest['probability_yes']}
+        fc = frozen.get('forecast')
+        if isinstance(fc, (int, float)):
+            return {'probability_yes': float(fc)}
+        return None
+    if type_ == 'multiple_choice':
+        if isinstance(latest, dict) and 'probability_yes_per_category' in latest:
+            return {'probability_yes_per_category': latest['probability_yes_per_category']}
+        fc = frozen.get('forecast')
+        if isinstance(fc, dict):
+            return {'probability_yes_per_category': fc}
+        return None
+    if type_ in ('numeric', 'date', 'discrete'):
+        # Metaculus returns the CDF under `forecast_values` in my_forecasts.latest
+        # (not `continuous_cdf`). The pre-post fixture mirrors this as `forecast_cdf`.
+        if isinstance(latest, dict) and latest.get('forecast_values'):
+            cdf = latest['forecast_values']
+            return {
+                'continuous_cdf': cdf,
+                'open_lower_bound': latest.get('open_lower_bound', False),
+                'open_upper_bound': latest.get('open_upper_bound', False),
+            }
+        # Offline fallback: pre-post packet stores `forecast_cdf`.
+        fc = frozen.get('forecast_cdf')
+        if isinstance(fc, list) and fc:
+            return {
+                'continuous_cdf': fc,
+                'open_lower_bound': frozen.get('open_lower_bound', False),
+                'open_upper_bound': frozen.get('open_upper_bound', False),
+            }
+        return None
+    return None
+
+
+def score_from_artifact(entry: dict[str, Any], post: dict[str, Any] | None = None) -> tuple[float | None, str]:
+    """Score a ledger entry from its persisted distribution, with no re-fetch.
+
+    If ``post`` is provided and resolved, its resolution is used (live truth).
+    Otherwise the entry's own ``resolution_state`` is used. In both cases the
+    distribution comes from ``entry['submitted_forecast_full']`` — captured at
+    build time — so scoring survives Metaculus pruning the original forecast.
+    """
+    full = entry.get('submitted_forecast_full')
+    if not isinstance(full, dict):
+        return None, 'no persisted forecast distribution'
+    type_ = entry['type']
+
+    if post is not None:
+        extracted = extract_resolution(post)
+        if not extracted['resolved']:
+            return None, 'unresolved'
+        if extracted['note'] != 'ok':
+            return None, extracted['note']
+        resolution = extracted['resolution']
+        if not isinstance(type_, str):
+            return None, 'resolved post missing type'
+    else:
+        resolution_state = entry.get('resolution_state') or {}
+        if not is_resolved(resolution_state):
+            return None, 'unresolved'
+        resolution = resolution_state.get('resolution')
+        if type_ == 'binary':
+            resolution = resolution in (True, 'yes', 'Yes', 'YES')
+
+    frozen = {
+        'type': type_,
+        'forecast': full.get('probability_yes') if type_ == 'binary' else full.get('probability_yes_per_category'),
+        'options': list(full.get('probability_yes_per_category', {}).keys()) if type_ == 'multiple_choice' else None,
+        'open_lower_bound': full.get('open_lower_bound'),
+        'open_upper_bound': full.get('open_upper_bound'),
+    }
+    return score_entry(type_=type_, frozen=frozen, resolution_state={'resolution': resolution, 'resolved': True, 'question_status': 'resolved'}, latest=full if type_ in ('numeric', 'date', 'discrete') else None)
+
+
 def build_ledger(
     post_receipt_path: str | Path,
     pre_post_path: str | Path | None = None,
@@ -102,11 +186,15 @@ def build_ledger(
         live_post = fetch_post(entry['post_id'], token=token) if fetch else None
         latest = extract_latest_forecast(live_post) if live_post else None
         resolution_state = extract_resolution_state(live_post) if live_post else {}
-        # If the live post is resolved, score directly from the post so the
-        # score fills automatically. Otherwise fall back to the frozen path
-        # (which yields score=None / 'unresolved' for open questions).
+        full_forecast = _full_submitted_forecast(entry['type'], frozen, latest)
+        # Score from the persisted distribution when available so resolution
+        # scoring does not depend on re-fetching Metaculus. Prefer a resolved
+        # live post's resolution (live truth) when present.
         if live_post is not None:
-            score, note = score_post(live_post, frozen, latest=latest)
+            score, note = score_from_artifact(
+                {'type': entry['type'], 'submitted_forecast_full': full_forecast, 'resolution_state': resolution_state},
+                post=live_post,
+            )
             score_fields = {'score': score, 'score_note': note, 'scoring_source': 'Metaculus baseline score (scoring/score_math.py)'}
         else:
             score_fields = _score_fields(entry['type'], frozen, resolution_state, latest)
@@ -119,6 +207,7 @@ def build_ledger(
             'source_post_receipt_sha256': hash_json(post_receipt),
             'source_pre_post_sha256': hash_json(pre_packet) if pre_packet else None,
             'submitted_forecast_summary': _public_forecast_summary(frozen),
+            'submitted_forecast_full': full_forecast,
             'rationale_sha256': hash_json(frozen.get('rationale')) if frozen.get('rationale') else None,
             'receipt_has_latest': entry['receipt_has_latest'],
             'latest_sha256_at_receipt': entry['latest_sha256_at_receipt'],

@@ -98,6 +98,18 @@ The ledger scores resolved questions automatically via `score_post(post, frozen)
 
 When you run the updater against a resolved live post, the `score` column fills from the post itself — no manual step. Open questions stay `score = null` with `score_note = "unresolved"`.
 
+## Persisted forecast distributions
+
+The ledger stores the **complete** submitted distribution in each entry (`submitted_forecast_full`), not just a hash:
+
+- binary → `probability_yes`
+- multiple_choice → `probability_yes_per_category`
+- numeric/date/discrete → the full `continuous_cdf` (201-point list)
+
+This is captured at build time from the live `my_forecasts.latest` (`forecast_values` key on Metaculus). Scoring then runs from the persisted distribution via `score_from_artifact`, so a resolved question can be scored **without re-fetching Metaculus** — even if the original forecast is later pruned or superseded. The CDF is your own forecast; persisting it is evidence retention, not a leak.
+
+Offline builds (`--no-fetch`) can still score binary/MC from the pre-post packet. Numeric requires the live CDF, which the fixture redacts; an offline numeric entry honestly reports `submitted_forecast_full: null` rather than inventing a distribution.
+
 ## Summary export
 
 The CLI also writes human-readable summaries next to the JSON ledger:
@@ -118,5 +130,5 @@ python3 -m pytest tests -q
 Expected:
 
 ```text
-18 passed
+25 passed
 ```
