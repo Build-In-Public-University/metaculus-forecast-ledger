@@ -1,5 +1,6 @@
 """Read-only Metaculus forecast ledger."""
 
+from .audit import audit_ledger, write_outcome_summary_csv
 from .ledger import (
     build_ledger,
     hash_json,
@@ -18,6 +19,8 @@ from .scoring import (
 )
 
 __all__ = [
+    'audit_ledger',
+    'write_outcome_summary_csv',
     'build_ledger',
     'hash_json',
     'load_json',

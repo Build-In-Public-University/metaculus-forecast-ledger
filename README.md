@@ -84,7 +84,7 @@ Unresolved questions keep `score = null` with `score_note = "unresolved"`. The l
 
 Source: https://github.com/Metaculus/metaculus/blob/main/scoring/score_math.py
 
-Continuous scoring needs the full CDF. The pinned Cup fixture redacts the numeric CDF, so a fully-scored numeric entry requires the live forecast distribution (`my_forecasts.latest.continuous_cdf`) at resolution time.
+The live API returns this CDF under `my_forecasts.latest.forecast_values`; the ledger stores it under the stable artifact key `submitted_forecast_full.continuous_cdf`.
 
 ## Resolution scoring pipeline
 
@@ -96,7 +96,16 @@ The ledger scores resolved questions automatically via `score_post(post, frozen)
    - numeric/date/discrete → float value
 2. `score_entry(...)` computes the Metaculus Baseline score (see above).
 
-When you run the updater against a resolved live post, the `score` column fills from the post itself — no manual step. Open questions stay `score = null` with `score_note = "unresolved"`.
+## Resolution audit loop
+
+Each normal updater run also appends resolved outcomes to:
+
+```text
+artifacts/ledger/outcomes.jsonl
+artifacts/ledger/outcome_summary.csv
+```
+
+The JSONL is append-only and idempotent: open questions produce no event; resolved and annulled questions produce one event keyed by post, resolution, and forecast hash; a changed resolution produces an explicit `resolution_discrepancy` event instead of silently overwriting history. Disable this projection with `--no-audit`.
 
 ## Persisted forecast distributions
 
@@ -130,5 +139,5 @@ python3 -m pytest tests -q
 Expected:
 
 ```text
-25 passed
+30 passed
 ```
